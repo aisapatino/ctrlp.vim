@@ -173,7 +173,7 @@ let s:fpats = {
 	\ }
 
 let s:has_conceal = has('conceal')
-let s:bufnr_width = 3
+let s:bufnr_width = 2
 
 " Keypad
 let s:kprange = {
@@ -514,22 +514,12 @@ fu! s:lsCmd()
 endf
 " - Buffers {{{1
 fu! s:bufparts(bufnr)
-	let idc  = (a:bufnr == bufnr('#')      ? '#' : '')  " alternative
-	let idc .= (getbufvar(a:bufnr, '&mod') ? '+' : '')  " modified
-	let idc .= (getbufvar(a:bufnr, '&ma')  ? '' : '-')  " nomodifiable
-	let idc .= (getbufvar(a:bufnr, '&ro')  ? '=' : '')  " readonly
-
-	" flags for highlighting
-	let hiflags  = (bufwinnr(a:bufnr) != -1    ? '*' : '')  " visible
-	let hiflags .= (getbufvar(a:bufnr, '&mod') ? '+' : '')  " modified
-	let hiflags .= (a:bufnr == s:crbufnr       ? '!' : '')  " current
-
 	let bname = bufname(a:bufnr)
 	let bname = (bname == '' ? '[No Name]' : fnamemodify(bname, s:bufname_mod))
 
 	let bpath = empty(s:bufpath_mod) ? '' : fnamemodify(bufname(a:bufnr), s:bufpath_mod).s:lash()
 
-	retu [idc, hiflags, bname, bpath]
+	retu [bpath, bname]
 endf
 fu! ctrlp#buffers(...)
 	let ids = sort(filter(range(1, bufnr('$')), '(empty(getbufvar(v:val, "&bt"))'
@@ -1575,20 +1565,16 @@ fu! s:formatline(str)
 	if ct == 'buf'
 		let bufnr = s:bufnrfilpath(str)[0]
 		let parts = s:bufparts(bufnr)
-		let str = printf('%'.s:bufnr_width.'s', bufnr)
+		let str = printf('%'.s:bufnr_width.'S', bufnr)
 		if s:has_conceal
-			let str .= printf(' %-13s %s%-36s',
-				\ '<bi>'.parts[0].'</bi>',
-				\ '<bn>'.parts[1], '{'.parts[2].'}</bn>')
+			let str .= printf('  <bp>%s</bp>', parts[0])
 			if (!empty(s:bufpath_mod))
-				let str .= printf('  %s', '<bp>'.parts[3].'</bp>')
+				let str .= parts[1]
 			en
 		el
-			let str .= printf(' %-5s %-30s',
-				\ parts[0],
-				\ parts[2])
+			let str .= ' ' . parts[0]
 			if (!empty(s:bufpath_mod))
-				let str .= printf('  %s', parts[3])
+				let str .= parts[1]
 			en
 		en
 	en
@@ -1807,14 +1793,6 @@ fu! ctrlp#syntax()
 	if s:curtype() == 'buf' && s:has_conceal
 		sy region CtrlPBufferNr     matchgroup=CtrlPLinePre start='^>\s\+' end='\s'
 		sy region CtrlPBufferInd    concealends matchgroup=Ignore start='<bi>' end='</bi>'
-		sy region CtrlPBufferRegion concealends matchgroup=Ignore start='<bn>' end='</bn>'
-			\ contains=CtrlPBufferHid,CtrlPBufferHidMod,CtrlPBufferVis,CtrlPBufferVisMod,CtrlPBufferCur,CtrlPBufferCurMod
-		sy region CtrlPBufferHid    concealends matchgroup=Ignore     start='\s*{' end='}' contained
-		sy region CtrlPBufferHidMod concealends matchgroup=Ignore    start='+\s*{' end='}' contained
-		sy region CtrlPBufferVis    concealends matchgroup=Ignore   start='\*\s*{' end='}' contained
-		sy region CtrlPBufferVisMod concealends matchgroup=Ignore  start='\*+\s*{' end='}' contained
-		sy region CtrlPBufferCur    concealends matchgroup=Ignore  start='\*!\s*{' end='}' contained
-		sy region CtrlPBufferCurMod concealends matchgroup=Ignore start='\*+!\s*{' end='}' contained
 		sy region CtrlPBufferPath   concealends matchgroup=Ignore start='<bp>' end='</bp>'
 	en
 endf
@@ -2380,7 +2358,7 @@ endf
 fu! s:matchbuf(item, pat)
 	let bufnr = s:bufnrfilpath(a:item)[0]
 	let parts = s:bufparts(bufnr)
-	let item = bufnr.parts[0].parts[2].s:lash().parts[3]
+	let item = bufnr.parts[0].s:lash().parts[1]
 	retu match(item, a:pat)
 endf
 
